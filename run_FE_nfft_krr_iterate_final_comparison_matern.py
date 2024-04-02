@@ -11,7 +11,7 @@ by T. Wagner, F. Nestler, M. Stoll (2024)
 Compare the RMSE, window size and time for fitting and predicting the model
 with the corresponding windows for the superior feature importance ranking based techniques
 with FGO, GSI, sklearn KRR and sklearn SVR, with fixed dmax=3, and fixed Nfeat and L1_reg
-individually for the particular data set and the Gaussian kernel.
+individually for the particular data set and the Matérn(1/2) kernel.
 """
 import numpy as np
 import pandas as pd
@@ -31,7 +31,6 @@ beta = 1
 # type of prediction task
 pred_type = "regression"
 # kernel type
-#kernel = "gaussian"
 kernel = "matern"
 
 ## GridSearch with NFFTKernelRidge
@@ -62,7 +61,7 @@ for data in data_sets:
     #######################  
     
     if data == "keggundir": # 26 features
-    
+        # https://github.com/JonathanWenger/itergp/blob/main/src/itergp/datasets/uci/_kegg_undir.py
         # https://archive.ics.uci.edu/ml/datasets/KEGG+Metabolic+Reaction+Network+(Undirected)
         
         # read dataset
@@ -102,6 +101,7 @@ for data in data_sets:
         
     elif data == "protein": # 9 features
         
+        # https://github.com/JonathanWenger/itergp/blob/main/src/itergp/datasets/uci/_protein.py
         # https://archive.ics.uci.edu/dataset/265/physicochemical+properties+of+protein+tertiary+structure
         
         # read dataset
@@ -135,11 +135,12 @@ for data in data_sets:
         
     elif data == "bike": # 14 features
         
+        # https://github.com/JonathanWenger/itergp/blob/main/src/itergp/datasets/uci/_bike_sharing.py
         # https://archive.ics.uci.edu/dataset/275/bike+sharing+dataset
         
         # read dataset
         df = pd.read_csv('/data/bike.csv', sep=",", header=0)
-        
+    
         X = df.iloc[:,2:-1]
         y = df.iloc[:,-1]
         
@@ -220,8 +221,7 @@ for data in data_sets:
     
     # set dmax
     dmax = 3
-    # set Nfeat: for large feature space 2d/3, d else
-    # set L1 regularization parameter for FGO
+    # set Nfeat to 2/3 of total number of features
     if data == "keggundir":
         Nfeat = 18
         L1_reg = 0.5
@@ -385,7 +385,7 @@ for data in data_sets:
         results = model.tune(X_train[:N_KRR,:], Ytrain[:N_KRR], X_test[:N_KRR,:], Ytest[:N_KRR])
     else:
         results = model.tune(X_train, Ytrain, X_test, Ytest)
-        
+    
     print("\n########################")
     print("\nGridSearch for sklearn KRR:")
     print("Best Parameters:", results[0])
