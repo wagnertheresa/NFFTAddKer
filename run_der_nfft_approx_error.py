@@ -12,7 +12,7 @@ Compute the NFFT approximation error for multiplying the derivative kernel
 wrt ell with a one vector for different values of ell,
 where the feature windows are determined consecutively via MIS.
 """
-import fastadj2
+import prescaledfastadj
 
 import numpy as np
 import pandas as pd
@@ -155,6 +155,27 @@ for N in Ndata:
     
     #########
     
+    # prescale data points and sigma for usage of prescaledfastadj
+    
+    # scale data points equally
+    points_center = np.mean(X, axis=0)
+    points = X - points_center
+    
+    # scale features such that abs(x[:,j]) <= 0.25
+    # scale values in range [-0.25, 0.25]
+    for j in range(X.shape[1]):
+        m = np.max(np.abs(points[:,j]))
+        points[:,j] = points[:,j] / m * 0.25
+        
+    # compute maximum radius possible in dmax dimensions
+    scaling = np.sqrt(dmax)
+    # ensure max radius 0.25 for points
+    points = points / scaling
+    # scale ell accordingly
+    scaled_ell = ell / scaling
+    
+    #########
+    
     # determine windows with MIS
     # initialize feature-grouping class object
     fgm = feature_grouping(X[:Nfg,:], Y[:Nfg], dmax, pred_type)
@@ -176,14 +197,14 @@ for N in Ndata:
         time_std = []
         time_nfft = []
         
-        for l in ell:
-            print("\nSolving for ell =", l)
+        for l in scaled_ell:
+            print("\nSolving for scaled_ell =", l)
 
             ###########################
             # Standard approach
             print('run std approach!')
             start_std = time.time()
-            K = der_kermat(X, ell=l)
+            K = der_kermat(points, ell=l)
             Kvec_std = K@vec
             time_std.append(time.time() - start_std)
             #print("Kvec_std:", Kvec_std)
@@ -192,7 +213,7 @@ for N in Ndata:
             # NFFT approach
             print('run NFFT approach!')
             start_nfft = time.time()
-            adj_mats1 = [fastadj2.AdjacencyMatrix(X[:,wind[i]], np.sqrt(2)*l, kernel=2, setup=setup, diagonal=0.0) for i in range(len(wind))]
+            adj_mats1 = [prescaledfastadj.AdjacencyMatrix(points[:,wind[i]], np.sqrt(2)*l, kernel=2, setup=setup, diagonal=0.0) for i in range(len(wind))]
             Kvec_nfft = [(2/l)*adj_mats1[i].apply(vec) for i in range(len(wind))]
             Kvec_nfft = (weight**2) * np.sum(Kvec_nfft, axis=0)
             time_nfft.append(time.time() - start_nfft)
